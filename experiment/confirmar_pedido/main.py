@@ -13,7 +13,7 @@ def confirm_order(request):
     Función que simula la confirmación de un pedido.
 
     Args:
-      `request` (flask.Request): Petición confirmación de un pedido.
+      `request` (flask.Request): Petición para la confirmación de un pedido.
       - `oder_id` Id de la orden.
     Returns:
       `HTTP 405` Si la petición no es de tipo POST.
@@ -26,15 +26,13 @@ def confirm_order(request):
             logger.error(f"El método {request.method} no está permitido")
             return "Método no permitido", 405
 
-        request_json = request.get_json(silent=True)
-
         try:
-            data = RequestBody(**request_json)
+            body = RequestBody(**request.get_json(silent=True))
         except Exception as e:
             logger.error("El cuerpo de la petición es inválido o faltan campos")
             return {"msg": f"Error de validación: {str(e)}"}, 400
 
-        order_id = data.order_id
+        order_id = body.order_id
         logger.info(f"Confirmando el pedido {order_id}...")
         # Lógica para confirmar el pedido
         logger.info("Pedido confirmado.")

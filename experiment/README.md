@@ -1,17 +1,21 @@
-# Componente Confirmar Pedido
+# Experimento de arquitectura
+
+A continuación se describen los pasos para ejecutar y desplegar los componentes que hacen parte del experimento.
+
+## Componente Confirmar Pedido
 
 Función que simula la confirmación de un pedido.
 
-## Ejecución
+### Ejecución
 
 Ejecute los siguientes comandos en la raíz del proyecto para probar la función localmente.
 
 ```bash
   pip install -r requirements.txt
-  functions-framework --target=confirm_order --port=8080
+  functions-framework --target=confirm_order --port=8080 --debug
 ```
 
-## Uso
+### Uso
 
 | Función     | `confirm_order`                        |
 | ----------- | -------------------------------------- |
@@ -28,7 +32,7 @@ Cuerpo:
 }
 ```
 
-## Despliegue
+### Despliegue
 
 Para desplegar la función en Google Cloud Functions, ejecute el siguiente comando en la raíz del proyecto:
 

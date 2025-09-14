@@ -1,0 +1,5 @@
+functions-framework
+flask
+pydantic
+google-maps-routeoptimization
+googlemaps
