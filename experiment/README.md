@@ -8,7 +8,7 @@ Función que simula la confirmación de un pedido.
 
 ### Ejecución
 
-Ejecute los siguientes comandos en la raíz del proyecto para probar la función localmente.
+Ejecute los siguientes comandos en la carpeta `confirmar_pedido` para probar la función localmente.
 
 ```bash
   pip install -r requirements.txt
@@ -34,7 +34,7 @@ Cuerpo:
 
 ### Despliegue
 
-Para desplegar la función en Google Cloud Functions, ejecute el siguiente comando en la raíz del proyecto:
+Para desplegar la función en Google Cloud Functions, ejecute el siguiente comando en la carpeta `confirmar_pedido`:
 
 ```bash
     gcloud functions deploy confirm_order `
@@ -44,4 +44,24 @@ Para desplegar la función en Google Cloud Functions, ejecute el siguiente coman
       --source . `
       --region us-central1 `
       --allow-unauthenticated `
+```
+
+## Componente Generar ruta de entrega
+
+Función que simula la generación de una ruta de entrega utilizando la API route optimization de google.
+
+### Despliegue
+
+Para desplegar la función en Google Cloud Functions, ejecute el siguiente comando en la carpeta `generar_ruta`:
+
+```bash
+    gcloud functions deploy create_route `
+      --runtime python313 `
+      --trigger-http `
+      --entry-point create_route `
+      --source . `
+      --region us-central1 `
+      --allow-unauthenticated `
+      --set-env-vars PROJECT_ID={Project ID} `
+      --set-env-vars API_KEY={Maps Platform API Key}
 ```
