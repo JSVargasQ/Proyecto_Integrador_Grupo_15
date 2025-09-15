@@ -1,10 +1,54 @@
+import json
 import logging
+import os
+
 import functions_framework
+from google.cloud import tasks_v2
 
 from .schemas.schemas import RequestBody, GenericResponse
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+client = tasks_v2.CloudTasksClient()
+
+project_id = os.environ.get('PROJECT_ID')
+queue_id = os.environ.get('QUEUE_ID')
+create_route_url = os.getenv('CREATE_ROUTE_PATH')
+
+
+def _enqueue_create_route_task(order_id):
+    # Request simulado para la creación de la ruta de entrega
+    create_route_request = {
+        "order_id": order_id,
+        "order_items": [
+            {
+                "product_id": "prod-001",
+                "quantity": 2,
+                "warehouse_location": "Storage Minibodegas"
+            },
+            {
+                "product_id": "prod-002",
+                "quantity": 1,
+                "warehouse_location": "Keep & Go Calle 73"
+            }
+        ],
+        "client": "Farmaceutica Test S.A.",
+        "client_location": "MiniBodegas - MB"
+    }
+
+    parent = client.queue_path(project_id, 'us-central1', queue_id)
+    task = {
+        "http_request": {
+            "http_method": tasks_v2.HttpMethod.POST,
+            "url": f'{create_route_url}',
+            "headers": {
+                "Content-type": "application/json"
+            },
+            "body": json.dumps(create_route_request).encode(),
+        }
+    }
+    client.create_task(request={"parent": parent, "task": task})
 
 
 @functions_framework.http
@@ -39,6 +83,7 @@ def confirm_order(request):
 
         # Simular la construcción de la ruta de entrega
         logger.info("Construcción de la ruta de entrega en proceso...")
+        _enqueue_create_route_task(order_id)
 
         return GenericResponse(msg=f"El pedido {order_id} ha sido confirmado.").model_dump()
     except Exception as e:

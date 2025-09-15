@@ -44,6 +44,9 @@ Para desplegar la función en Google Cloud Functions, ejecute el siguiente coman
       --source . `
       --region us-central1 `
       --allow-unauthenticated `
+      --set-env-vars PROJECT_ID={Project ID} `
+      --set-env-vars QUEUE_ID=route-task-queue `
+      --set-env-vars CREATE_ROUTE_PATH={Path de la función Generar ruta de entrega}
 ```
 
 ## Componente Generar ruta de entrega
@@ -64,4 +67,19 @@ Para desplegar la función en Google Cloud Functions, ejecute el siguiente coman
       --allow-unauthenticated `
       --set-env-vars PROJECT_ID={Project ID} `
       --set-env-vars API_KEY={Maps Platform API Key}
+```
+
+## Cola de mensajes de Cloud Tasks
+
+Cola de mensajes para gestionar asíncronamente la generación de rutas de entrega.
+
+### Despliegue
+
+Para crear la cola de mensajes en Cloud Tasks, ejecute el siguiente comando:
+
+```bash
+  gcloud tasks queues create route-task-queue `
+  --location=us-central1 `
+  --max-attempts=2 `
+  --min-backoff=5s
 ```
