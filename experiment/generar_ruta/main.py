@@ -1,19 +1,14 @@
-import logging
+import json
 import os
 import random
-
-import googlemaps
-import functions_framework
-import redis
-import json
-
-from google.maps import routeoptimization_v1 as ro
 from datetime import datetime, timedelta
 
-from .schemas.schemas import RequestBody, GenericResponse, Location, RouteOptimizationResponse
+import functions_framework
+import googlemaps
+import redis
+from google.maps import routeoptimization_v1 as ro
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from .schemas.schemas import RequestBody, GenericResponse, Location, RouteOptimizationResponse
 
 project_id = os.environ.get("PROJECT_ID")
 api_key = os.environ.get("API_KEY")
@@ -46,7 +41,7 @@ def _calculate_route(order, warehouse_dict):
     global_start_time = datetime.now().replace(microsecond=0)
     global_end_time = (datetime.now() + timedelta(weeks=1)).replace(microsecond=0)
 
-    logger.info("Geocodificando las direcciones...")
+    print("Geocodificando las direcciones...")
     delivery_location = _geocode_address(order.client.location)
 
     shipments = []
@@ -68,7 +63,7 @@ def _calculate_route(order, warehouse_dict):
             ]
         })
 
-    logger.info("Calculando la ruta óptima...")
+    print("Calculando la ruta óptima...")
     request = ro.OptimizeToursRequest(
         parent="projects/" + project_id,
         model={
@@ -100,9 +95,10 @@ def _update_cache(warehouse_dict, client_id, route_response):
     )
 
     cache_key = f"{':'.join([str(warehouse_id) for warehouse_id in warehouse_dict])}:{client_id}"
-    cache_value = json.dumps({
-        "route_data": response_schema.model_dump()
-    })
+    cache_value = json.dumps(response_schema.model_dump())
+
+    print(f"Cache key: {cache_key}")
+
     redis_client.set(cache_key, cache_value, ex=300)  # Expira en 5 minutos
 
 
@@ -124,31 +120,31 @@ def create_route(request):
         - `client.name` Nombre del cliente.
         - `client.location` Dirección del cliente.
     Returns:
-      `HTTP 400` Si campos de la petición faltan o son inválidos.
       `HTTP 201` Si se genera la ruta correctamente.
+      `HTTP 400` Si campos de la petición faltan o son inválidos.
       `HTTP 500` Si ocurre un error durante la generación de la ruta.
     """
     try:
         try:
             body = RequestBody(**request.get_json(silent=True))
         except Exception as e:
-            logger.error("El cuerpo de la petición es inválido o faltan campos")
-            return {"msg": f"Error de validación: {str(e)}"}, 400
+            print("El cuerpo de la petición es inválido o faltan campos")
+            return GenericResponse(msg=f"Error de validación: {str(e)}").model_dump(), 400
 
         order_id = body.order_id
 
-        logger.info("Agrupando productos por almacén...")
+        print("Agrupando productos por almacén...")
         warehouse_dict = _group_products_by_warehouse(body.order_items)
 
-        logger.info(f"Generando la ruta para el pedido {order_id}...")
+        print(f"Generando la ruta para el pedido {order_id}...")
         route_response = _calculate_route(body, warehouse_dict)
-        logger.info(f"Ruta generada: {route_response}")
+        print(f"Ruta generada: {route_response}")
 
-        logger.info("Guardando información de la ruta en caché...")
+        print("Guardando información de la ruta en caché...")
         _update_cache(warehouse_dict, body.client.id, route_response)
-        logger.info("Caché actualizada correctamente.")
+        print("Caché actualizada correctamente.")
 
         return GenericResponse(msg=f"La ruta para el pedido {order_id} ha sido creada correctamente.").model_dump(), 201
     except Exception as e:
-        logger.error(f"Error al generar la ruta: {str(e)}")
+        print(f"Error al generar la ruta: {str(e)}")
         return {"msg": "Error interno del servidor"}, 500
