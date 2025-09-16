@@ -3,3 +3,4 @@ flask
 pydantic
 google-maps-routeoptimization
 googlemaps
+redis

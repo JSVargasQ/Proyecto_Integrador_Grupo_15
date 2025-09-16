@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from datetime import datetime
 
 import functions_framework
 from google.cloud import tasks_v2
@@ -25,16 +26,27 @@ def _enqueue_create_route_task(order_id):
             {
                 "product_id": "prod-001",
                 "quantity": 2,
+                "warehouse_id": "wh-001",
                 "warehouse_location": "Storage Minibodegas"
             },
             {
                 "product_id": "prod-002",
                 "quantity": 1,
+                "warehouse_id": "wh-002",
+                "warehouse_location": "Keep & Go Calle 73"
+            },
+            {
+                "product_id": "prod-003",
+                "quantity": 5,
+                "warehouse_id": "wh-002",
                 "warehouse_location": "Keep & Go Calle 73"
             }
         ],
-        "client": "Farmaceutica Test S.A.",
-        "client_location": "MiniBodegas - MB"
+        "client": {
+            "id": "client-123",
+            "name": "Farmaceutica Test S.A.",
+            "location": "Calle 100 #20-30, Bogotá, Colombia"
+        }
     }
 
     parent = client.queue_path(project_id, 'us-central1', queue_id)
@@ -85,7 +97,7 @@ def confirm_order(request):
         logger.info("Construcción de la ruta de entrega en proceso...")
         _enqueue_create_route_task(order_id)
 
-        return GenericResponse(msg=f"El pedido {order_id} ha sido confirmado.").model_dump()
+        return GenericResponse(msg=f"El pedido {order_id} ha sido confirmado. Timestamp {datetime.now()}").model_dump()
     except Exception as e:
         logger.error(f"Error al confirmar el pedido: {str(e)}")
         return {"msg": "Error interno del servidor"}, 500

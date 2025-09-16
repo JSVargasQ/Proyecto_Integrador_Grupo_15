@@ -66,7 +66,8 @@ Para desplegar la función en Google Cloud Functions, ejecute el siguiente coman
       --region us-central1 `
       --allow-unauthenticated `
       --set-env-vars PROJECT_ID={Project ID} `
-      --set-env-vars API_KEY={Maps Platform API Key}
+      --set-env-vars API_KEY={Maps Platform API Key} `
+      --set-env-vars CACHE_HOST={Ip de la instancia de Redis} `
 ```
 
 ## Cola de mensajes de Cloud Tasks
@@ -82,4 +83,20 @@ Para crear la cola de mensajes en Cloud Tasks, ejecute el siguiente comando:
   --location=us-central1 `
   --max-attempts=2 `
   --min-backoff=5s
+```
+
+## Caché de Memorystore - Redis
+
+Caché para almacenar temporalmente las rutas de entrega generadas.
+
+### Despliegue
+
+Para crear la instancia de Redis en Memorystore, ejecute el siguiente comando:
+
+```bash
+  gcloud redis instances create route-cache `
+  --size=1 `
+  --region=us-central1 `
+  --tier=BASIC `
+  --redis-version=redis_7_2
 ```
