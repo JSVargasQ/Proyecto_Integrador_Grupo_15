@@ -19,6 +19,16 @@ client = ro.RouteOptimizationClient()
 redis_client = redis.Redis(host=redis_host, port=6379, decode_responses=True)
 
 
+def _get_route_in_cache(warehouse_dict, order):
+    cache_key = f"{':'.join([str(warehouse_id) for warehouse_id in warehouse_dict])}:{order.client.id}"
+    cache_value = redis_client.get(cache_key)
+
+    if not cache_value:
+        print(f"No se encontró la ruta {cache_key} en caché.")
+
+    return cache_value is None
+
+
 def _group_products_by_warehouse(order_items):
     warehouse_dict = {}
     for item in order_items:
@@ -136,6 +146,11 @@ def create_route(request):
         print("Agrupando productos por almacén...")
         warehouse_dict = _group_products_by_warehouse(body.order_items)
 
+        if not _get_route_in_cache(warehouse_dict, body):
+            print(f"La ruta para el pedido {order_id} ya existe en caché. No se generará una nueva.")
+            print(f"Timestamp - Ruta ya existe en caché: {datetime.now()}")
+            return GenericResponse(msg=f"La ruta para el pedido {order_id} ya existe en caché.").model_dump(), 200
+
         print(f"Generando la ruta para el pedido {order_id}...")
         route_response = _calculate_route(body, warehouse_dict)
         print(f"Ruta generada: {route_response}")
@@ -144,6 +159,7 @@ def create_route(request):
         _update_cache(warehouse_dict, body.client.id, route_response)
         print("Caché actualizada correctamente.")
 
+        print(f"Timestamp - Ruta generada y almacenada en caché: {datetime.now()}")
         return GenericResponse(msg=f"La ruta para el pedido {order_id} ha sido creada correctamente.").model_dump(), 201
     except Exception as e:
         print(f"Error al generar la ruta: {str(e)}")
