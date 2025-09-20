@@ -1,3 +1,4 @@
+import csv
 import json
 import os
 import random
@@ -6,6 +7,7 @@ from datetime import datetime, timedelta
 import functions_framework
 import googlemaps
 import redis
+from google.cloud import storage
 from google.maps import routeoptimization_v1 as ro
 
 from .schemas.schemas import RequestBody, GenericResponse, Location, RouteOptimizationResponse
@@ -13,20 +15,13 @@ from .schemas.schemas import RequestBody, GenericResponse, Location, RouteOptimi
 project_id = os.environ.get("PROJECT_ID")
 api_key = os.environ.get("API_KEY")
 redis_host = os.environ.get("CACHE_HOST")
+bucket_name = os.environ.get('BUCKET')
 
 gmaps = googlemaps.Client(key=api_key)
 client = ro.RouteOptimizationClient()
 redis_client = redis.Redis(host=redis_host, port=6379, decode_responses=True)
-
-
-def _get_route_in_cache(warehouse_dict, order):
-    cache_key = f"{':'.join([str(warehouse_id) for warehouse_id in warehouse_dict])}:{order.client.id}"
-    cache_value = redis_client.get(cache_key)
-
-    if not cache_value:
-        print(f"No se encontró la ruta {cache_key} en caché.")
-
-    return cache_value is None
+storage_client = storage.Client()
+bucket = storage_client.bucket(bucket_name)
 
 
 def _group_products_by_warehouse(order_items):
@@ -36,6 +31,16 @@ def _group_products_by_warehouse(order_items):
             warehouse_dict[item.warehouse_id] = []
         warehouse_dict[item.warehouse_id].append(item)
     return warehouse_dict
+
+
+def _get_route_in_cache(warehouse_dict, order):
+    cache_key = f"{':'.join([str(warehouse_id) for warehouse_id in warehouse_dict])}:{order.client.id}"
+    cache_exists = redis_client.exists(cache_key)
+
+    if not cache_exists:
+        print(f"No se encontró la ruta {cache_key} en caché.")
+
+    return not cache_exists
 
 
 def _geocode_address(address: str):
@@ -112,6 +117,24 @@ def _update_cache(warehouse_dict, client_id, route_response):
     redis_client.set(cache_key, cache_value, ex=300)  # Expira en 5 minutos
 
 
+def _update_last_row_in_csv(extra_values):
+    try:
+        blob = bucket.blob("data.csv")
+        csv_data = blob.download_as_text(encoding="utf-8")
+        rows = list(csv.reader(csv_data.splitlines()))
+
+        if rows:
+            # Añade los valores extra a la última fila
+            rows[-1].extend([str(item) for item in extra_values])
+
+            updated_csv = "\n".join([",".join(row) for row in rows])
+            blob.upload_from_string(updated_csv, content_type="text/csv")
+        else:
+            print("El archivo CSV está vacío.")
+    except Exception as e:
+        print(f"Error al actualizar la última fila del CSV en Cloud Storage: {str(e)}")
+
+
 @functions_framework.http
 def create_route(request):
     """
@@ -147,12 +170,15 @@ def create_route(request):
         warehouse_dict = _group_products_by_warehouse(body.order_items)
 
         if not _get_route_in_cache(warehouse_dict, body):
-            print(f"La ruta para el pedido {order_id} ya existe en caché. No se generará una nueva.")
+            print(f"La ruta para el pedido {order_id} ya existe en caché.")
             print(f"Timestamp - Ruta ya existe en caché: {datetime.now()}")
+            _update_last_row_in_csv([len(warehouse_dict), 'La ruta ya existe en cache'])
             return GenericResponse(msg=f"La ruta para el pedido {order_id} ya existe en caché.").model_dump(), 200
 
         print(f"Generando la ruta para el pedido {order_id}...")
+        start_time = datetime.now()
         route_response = _calculate_route(body, warehouse_dict)
+        end_time = datetime.now()
         print(f"Ruta generada: {route_response}")
 
         print("Guardando información de la ruta en caché...")
@@ -160,6 +186,7 @@ def create_route(request):
         print("Caché actualizada correctamente.")
 
         print(f"Timestamp - Ruta generada y almacenada en caché: {datetime.now()}")
+        _update_last_row_in_csv([len(warehouse_dict), (end_time - start_time).total_seconds()])
         return GenericResponse(msg=f"La ruta para el pedido {order_id} ha sido creada correctamente.").model_dump(), 201
     except Exception as e:
         print(f"Error al generar la ruta: {str(e)}")

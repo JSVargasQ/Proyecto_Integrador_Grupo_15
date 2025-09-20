@@ -4,11 +4,28 @@ from datetime import datetime, timedelta
 
 import functions_framework
 import redis
+from google.cloud import storage
 
-from .schemas.schemas import ClientInfo, GenericResponse, Order, ProductOrder, RouteInfo
+from .schemas.schemas import GenericResponse, Order, RouteInfo
 
+bucket_name = os.environ.get('BUCKET')
 redis_host = os.environ.get("CACHE_HOST")
+
+storage_client = storage.Client()
+bucket = storage_client.bucket(bucket_name)
 redis_client = redis.Redis(host=redis_host, port=6379, decode_responses=True)
+
+
+def _get_order_from_bucket(order_id):
+    try:
+        blob = bucket.blob(f"{order_id}.txt")
+        order_json = blob.download_as_text(encoding="utf-8")
+        order_dict = json.loads(order_json)
+        order = Order(**order_dict)
+        return order
+    except Exception as e:
+        print(f"Error al obtener el pedido {order_id} del bucket: {str(e)}")
+        return None
 
 
 def _group_products_by_warehouse(products):
@@ -56,35 +73,7 @@ def get_delivery_date(request):
         print("Obteniendo la información de la orden...")
         # Lógica para obtener la información de la orden de la base de datos
         # Simulación de datos
-        order = Order(
-            order_id=order_id,
-            created_at=datetime.now(),
-            order_items=[
-                ProductOrder(
-                    product_id="prod-001",
-                    quantity=2,
-                    warehouse_id="wh-001",
-                    warehouse_location="Storage Minibodegas"
-                ),
-                ProductOrder(
-                    product_id="prod-002",
-                    quantity=1,
-                    warehouse_id="wh-002",
-                    warehouse_location="Keep & Go Calle 73"
-                ),
-                ProductOrder(
-                    product_id="prod-003",
-                    quantity=5,
-                    warehouse_id="wh-002",
-                    warehouse_location="Keep & Go Calle 73"
-                )
-            ],
-            client=ClientInfo(
-                id="client-123",
-                name="Farmaceutica Test S.A.",
-                location="Calle 100 #20-30, Bogotá, Colombia"
-            )
-        )
+        order = _get_order_from_bucket(order_id)
 
         print("Obteniendo información de la ruta en caché...")
         route = _get_route_in_cache(order)
@@ -93,7 +82,7 @@ def get_delivery_date(request):
             print(f"No se encontró la ruta en caché para el pedido {order_id}.")
             print(f"Timestamp - Cálculo del tiempo de entrega: {datetime.now()}")
             return GenericResponse(
-                msg="La ruta no está disponible aún. Por favor, intente más tarde.").model_dump(), 202
+                msg="La ruta no está disponible aún. Intente más tarde.").model_dump(), 202
         else:
             print(f"Ruta encontrada en caché para el pedido {order_id}: {route}")
             print(f"Timestamp - Cálculo del tiempo de entrega: {datetime.now()}")

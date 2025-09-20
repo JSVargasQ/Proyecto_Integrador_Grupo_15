@@ -4,3 +4,4 @@ pydantic
 google-maps-routeoptimization
 googlemaps
 redis
+google-cloud-storage

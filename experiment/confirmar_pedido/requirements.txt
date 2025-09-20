@@ -2,3 +2,4 @@ functions-framework
 flask
 pydantic
 google-cloud-tasks
+google-cloud-storage

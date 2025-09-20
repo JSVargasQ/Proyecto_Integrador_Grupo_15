@@ -33,6 +33,18 @@ Para crear la instancia de Redis en Memorystore, ejecute el siguiente comando:
   --redis-version=redis_7_2
 ```
 
+## Bucket en Cloud Storage
+
+Bucket para almacenar los datos de los resultados para el análisis. Es necesario que exista un archivo vacío llamado `data.csv` en el bucket.
+
+### Despliegue
+
+Para crear la cola de mensajes en Cloud Tasks, ejecute el siguiente comando:
+
+```bash
+  gcloud storage buckets create gs://g15-experiment --location=us-central1
+```
+
 ## Componente Generar ruta de entrega
 
 Función que simula la generación de una ruta de entrega utilizando la API route optimization de google.
@@ -51,7 +63,8 @@ Para desplegar la función en Google Cloud Functions, ejecute el siguiente coman
       --allow-unauthenticated `
       --set-env-vars PROJECT_ID={ID del proyecto de GCloud} `
       --set-env-vars API_KEY={API Key de Maps} `
-      --set-env-vars CACHE_HOST={Ip de la instancia de Redis}
+      --set-env-vars CACHE_HOST={Ip de la instancia de Redis} `
+      --set-env-vars BUCKET=g15-experiment
 ```
 
 ## Componente Calcular tiempo de entrega
@@ -70,7 +83,8 @@ Para desplegar la función en Google Cloud Functions, ejecute el siguiente coman
       --source . `
       --region us-central1 `
       --allow-unauthenticated `
-      --set-env-vars CACHE_HOST={Ip de la instancia de Redis}
+      --set-env-vars CACHE_HOST={Ip de la instancia de Redis} `
+      --set-env-vars BUCKET=g15-experiment
 ```
 
 ## Componente Confirmar Pedido
@@ -117,6 +131,7 @@ Para desplegar la función en Google Cloud Functions, ejecute el siguiente coman
       --allow-unauthenticated `
       --set-env-vars PROJECT_ID={ID del proyecto de GCloud} `
       --set-env-vars QUEUE_ID=route-task-queue `
-      --set-env-vars CREATE_ROUTE_PATH={Path de la función Generar ruta de entrega}
-      --set-env-vars GET_DELIVERY_DATE_PATH={Path de la función Calcular tiempo de entrega}
+      --set-env-vars CREATE_ROUTE_PATH={Path de la función Generar ruta de entrega} `
+      --set-env-vars GET_DELIVERY_DATE_PATH={Path de la función Calcular tiempo de entrega} `
+      --set-env-vars BUCKET=g15-experiment
 ```
