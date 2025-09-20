@@ -135,3 +135,15 @@ Para desplegar la función en Google Cloud Functions, ejecute el siguiente coman
       --set-env-vars GET_DELIVERY_DATE_PATH={Path de la función Calcular tiempo de entrega} `
       --set-env-vars BUCKET=g15-experiment
 ```
+
+## Componente Confirmar Pedido
+
+Función que simula la precarga de rutas de entrega.
+
+### Ejecución
+
+En la carpeta `precarga_rutas` ejecute el archivo `main.py` para realizar el proceso de precarga de rutas.
+
+```bash
+  python main.py
+```
